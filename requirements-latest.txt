@@ -1,2 +1,4 @@
 django
 pytz
+feedparser
+beautifulsoup4
