@@ -1,0 +1,37 @@
+{% extends 'feeddler/base/layout.html' %}
+{% load staticfiles %}
+
+{% block page_content %}
+
+<div class="row">
+<div class="col-md-12">
+  <h1>Feeds</h1>
+  {% if feeds %}
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Link</th>
+          <th>Active</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for feed in feeds %}
+          <tr>
+            <td><a href="{{ feed.link }}">{{ feed.link }}</a></td>
+            <td>
+              <button id="feed-{{ feed.id }}" data-feed_id="{{ feed.id }}" data-url="{% url 'feed_activity' %}" type="button" class="feed btn {% if feed.is_active %}btn-success{% else %}btn-default{% endif %} btn-xs">{{ feed.is_active }}</button>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No feeds are available.</p>
+  {% endif %}
+  </div>
+</div>
+
+{% endblock page_content %}
+
+{% block page_js %}
+    <script src="{% static 'feeddler/js/index.js' %}"></script>
+{% endblock page_js %}
