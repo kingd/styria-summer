@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.core.urlresolvers import reverse
 from django.contrib import messages
 
-from feeddler.models import Feed
+from feeddler.models import Feed, WordApi
 from feeddler.forms import FeedForm
 
 
@@ -34,7 +34,7 @@ def feed_activity(request):
 
 
 def add_feed(request):
-    """Adds a new feed."""
+    """Adds new feed."""
     if request.method == 'POST':
         form = FeedForm(request.POST)
         if form.is_valid():
@@ -47,3 +47,54 @@ def add_feed(request):
         'form': form,
     }
     return render(request, 'feeddler/add_feed.html', context)
+
+
+def words_api(request):
+    """
+    Words API.
+
+    :param word: Word to count - Required
+    :param feed_link: Count `word` in feed_link
+    :param entty_link: Count `word` in entry_link
+
+    If `feed_link` is provided, counts the `word` only in that feed.
+    If `entry_link` is provided, counts the `word` only in that entry.
+
+    Results on success::
+        # only word param
+        {
+            'result': {
+                'word': 'exampleword',
+                'count' 12
+            }
+        }
+
+        # word and feed_link params
+        {
+            'result': {
+                'word': 'exampleword',
+                'count' 12,
+                'feed_link': 'somelink'
+            }
+        }
+
+        # word and entry_link params
+        {
+            'result': {
+                'word': 'exampleword',
+                'count' 12,
+                'entry_link': 'somelink'
+            }
+        }
+
+    Result on error::
+        {
+            'error': 'Some error message'
+        }
+    """
+    word = request.GET.get('word')
+    feed_link = request.GET.get('feed_link')
+    entry_link = request.GET.get('entry_link')
+    word_api = WordApi()
+    rv = word_api.find(word, feed_link=feed_link, entry_link=entry_link)
+    return JsonResponse(rv)
