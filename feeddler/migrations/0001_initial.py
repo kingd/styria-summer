@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
             name='Entry',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('link', models.CharField(default=b'', max_length=512)),
+                ('link', models.CharField(unique=True, max_length=512)),
                 ('title', models.CharField(max_length=512, null=True, blank=True)),
                 ('content', models.TextField(null=True, blank=True)),
             ],
@@ -42,6 +42,7 @@ class Migration(migrations.Migration):
                 ('title', models.CharField(max_length=1024, null=True, blank=True)),
                 ('last_modified', models.DateTimeField(null=True, blank=True)),
                 ('etag', models.CharField(max_length=512, null=True, blank=True)),
+                ('entries', models.ManyToManyField(to='feeddler.Entry')),
             ],
             options={
             },
@@ -96,18 +97,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='entry',
-            name='feed',
-            field=models.ForeignKey(to='feeddler.Feed'),
-            preserve_default=True,
-        ),
-        migrations.AddField(
-            model_name='entry',
             name='words',
             field=models.ManyToManyField(to='feeddler.Word', through='feeddler.EntryWord'),
             preserve_default=True,
-        ),
-        migrations.AlterUniqueTogether(
-            name='entry',
-            unique_together=set([('feed', 'link')]),
         ),
     ]

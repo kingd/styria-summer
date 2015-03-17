@@ -1,5 +1,16 @@
+import re
+from datetime import datetime
 from collections import OrderedDict
-from django.db import models
+import logging
+
+from django.db import models, transaction
+from django.utils import timezone
+
+from bs4 import BeautifulSoup
+import feedparser
+
+
+logger = logging.getLogger(__name__)
 
 
 class Feed(models.Model):
@@ -10,6 +21,7 @@ class Feed(models.Model):
     last_modified = models.DateTimeField(blank=True, null=True)
     etag = models.CharField(max_length=512, blank=True, null=True)
     words = models.ManyToManyField("Word", through='FeedWord')
+    entries = models.ManyToManyField("Entry")
 
     def __unicode__(self):
         return self.link
@@ -17,14 +29,10 @@ class Feed(models.Model):
 
 class Entry(models.Model):
     """Feed entries."""
-    feed = models.ForeignKey(Feed)
-    link = models.CharField(max_length=512, default='')
+    link = models.CharField(max_length=512, unique=True)
     title = models.CharField(max_length=512, blank=True, null=True)
     content = models.TextField(blank=True, null=True)
     words = models.ManyToManyField("Word", through='EntryWord')
-
-    class Meta:
-        unique_together = ('feed', 'link')
 
     def __unicode__(self):
         if not self.title:
@@ -160,3 +168,101 @@ class WordApi(object):
         if entry_word:
             count = entry_word.count
         return count
+
+
+# Feeder  =====================================================================
+
+
+class Feeder(object):
+    def __init__(self):
+        self.parser = feedparser
+
+    def process_feeds(self):
+        feeds = Feed.objects.filter(is_active=True)
+        for feed in feeds:
+            logger.info('Processing feed: %s' % feed.link)
+            self.process_feed(feed)
+            logger.info('\n')
+
+    def process_feed(self, feed):
+        rss = self.parser.parse(feed.link, modified=feed.last_modified,
+                                etag=feed.etag)
+        if rss.feed:
+            if 'status' in rss:
+                logger.info('Status: %s' % rss.status)
+            if 'etag' in rss:
+                feed.etag = rss.etag
+            if 'modified' in rss:
+                modified = self.time_to_datetime(rss.modified_parsed)
+                feed.last_modified = modified
+            feed.title = rss.feed.title
+            feed.save()
+            for entry in rss.entries:
+                self.process_entry(entry, feed)
+        else:
+            logger.info("Not modified, skipping: %s" % feed)
+
+    def process_entry(self, entry, feed):
+        title = ''
+        title_words = []
+        if 'link' in entry:
+            link = entry.link
+        if 'title' in entry:
+            title = entry.title
+            title_words = self.extract_words(title)
+
+        content = ''
+        content_words = []
+        if 'content' in entry:
+            for c in entry.content:
+                if 'value' in c:
+                    content_words.extend(self.extract_words(c.value))
+                    content += c.value
+        elif 'summary' in entry:
+            content_words = self.extract_words(entry.summary)
+            content = entry.summary
+
+        words = content_words + title_words
+        db_entry = Entry.objects.filter(link=link).first()
+        new_entry = False
+        if db_entry is None:
+            db_entry = Entry(link=link, title=title, content=content)
+            db_entry.save()
+            new_entry = True
+        feed.entries.add(db_entry)
+        self.save_words(words, db_entry, feed, new_entry)
+
+    def time_to_datetime(self, time_struct):
+        date = datetime(*time_struct[:6])
+        date = timezone.make_aware(date, timezone.get_current_timezone())
+        return date.isoformat()
+
+    def extract_words(self, content):
+        soup = BeautifulSoup(content)
+        content = soup.get_text().lower()
+        regex = re.compile(ur'\w+', re.UNICODE)
+        words = regex.findall(content)
+        return words
+
+    @transaction.atomic
+    def save_words(self, words, entry, feed, new_entry):
+        logger.info('Saving: %s words' % len(words))
+        for w in words:
+            if new_entry:
+                word, is_created = Word.objects.get_or_create(word=w)
+                word.count += 1
+                word.save()
+
+            feed_word = FeedWord.objects.filter(feed=feed, word=word).first()
+            if feed_word is None:
+                feed_word = FeedWord(feed=feed, word=word)
+            feed_word.count += 1
+            feed_word.save()
+
+            if new_entry:
+                entry_word = EntryWord.objects.filter(
+                    entry=entry, word=word).first()
+                if entry_word is None:
+                    entry_word = EntryWord(entry=entry, word=word)
+                entry_word.count += 1
+                entry_word.save()
