@@ -8,4 +8,5 @@ urlpatterns = patterns(
     url(r'^words/$', views.words_api, name='words_api'),
     url(r'^feed-activity/$', views.feed_activity, name='feed_activity'),
     url(r'^add-feed/$', views.add_feed, name='add_feed'),
+    url(r'^top-words/$', views.top_words, name='top_words'),
 )

@@ -1,0 +1,62 @@
+{% extends 'feeddler/base/layout.html' %}
+{% load staticfiles %}
+
+{% block page_content %}
+
+<div class="row">
+<div class="col-md-12">
+  <h1>Feeds</h1>
+    {{ feed_id }}
+  <select class="search">
+    <option {% if feed_id == 0 %}selected{% endif %} value="0">All</option>
+    {% for feed in feeds %}
+      <option {% if feed_id == feed.id %}selected{% endif %} value="{{ feed.id }}">{{ feed }}</option>
+    {% endfor %}
+  </select>
+  <br />
+
+  <div class="pagination">
+    <span class="step-links">
+      {% if words.has_previous %}
+      <a href="?feed_id={{ feed_id }}&page={{ words.previous_page_number }}">previous</a>
+      {% endif %}
+
+      <span class="current">
+        Page {{ words.number }} of {{ words.paginator.num_pages }}.
+      </span>
+
+      {% if words.has_next %}
+      <a href="?feed_id={{ feed_id }}&page={{ words.next_page_number }}">next</a>
+      {% endif %}
+    </span>
+  </div>
+  <br />
+
+  {% if words %}
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th>Word</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for word in words %}
+          <tr>
+            <td>{{ word.word }}
+            <td>{{ word.count }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No words are available.</p>
+  {% endif %}
+  </div>
+</div>
+
+{% endblock page_content %}
+
+{% block page_js %}
+    <script src="{% static 'feeddler/js/top_words.js' %}"></script>
+{% endblock page_js %}

@@ -2,8 +2,10 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.core.urlresolvers import reverse
 from django.contrib import messages
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-from feeddler.models import Feed, WordApi
+
+from feeddler.models import Feed, WordApi, Word, FeedWord
 from feeddler.forms import FeedForm
 
 
@@ -47,6 +49,35 @@ def add_feed(request):
         'form': form,
     }
     return render(request, 'feeddler/add_feed.html', context)
+
+
+def top_words(request):
+    try:
+        feed_id = int(request.GET.get('feed_id'))
+    except:
+        feed_id = 0
+
+    if feed_id != 0:
+        words = FeedWord.objects.filter(
+            feed=feed_id).order_by('-count').values('word', 'count')
+    else:
+        words = Word.objects.order_by('-count').values('word', 'count')
+
+    paginator = Paginator(words, 20)
+    page = request.GET.get('page')
+    try:
+        words = paginator.page(page)
+    except PageNotAnInteger:
+        words = paginator.page(1)
+    except EmptyPage:
+        words = paginator.page(paginator.num_pages)
+    feeds = Feed.objects.all()
+    context = {
+        'words': words,
+        'feeds': feeds,
+        'feed_id': feed_id,
+    }
+    return render(request, 'feeddler/top_words.html', context)
 
 
 def words_api(request):

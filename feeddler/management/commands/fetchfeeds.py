@@ -4,7 +4,7 @@ from datetime import datetime
 import feedparser
 from bs4 import BeautifulSoup
 from django.db import transaction
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 from feeddler.models import Feed, Word, Entry, FeedWord, EntryWord
 
