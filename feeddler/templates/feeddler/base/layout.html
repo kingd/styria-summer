@@ -53,6 +53,10 @@
             </li>
             <li><a href="{% url 'top_words' %}">Top words</a><li>
           </ul>
+          <div id="welcome">
+            <span><a href="{% url 'admin:index' %}">Admin</a></span>
+            <span>Welcome {% if user.is_authenticated %}{{ user.username }}{% else %}guest{% endif %}</span>
+          </div>
         </div><!--/.nav-collapse -->
       </div>
     </nav>

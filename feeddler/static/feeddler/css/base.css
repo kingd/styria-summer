@@ -16,3 +16,12 @@ body {
 .theme-showcase .navbar .container {
     width: auto;
 }
+
+#welcome {
+    color: green;
+}
+#welcome span {
+    float: right;
+    display: inline-block;
+    margin: 10px 10px;
+}
