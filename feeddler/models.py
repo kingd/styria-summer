@@ -224,13 +224,12 @@ class Feeder(object):
 
         words = content_words + title_words
         db_entry = Entry.objects.filter(link=link).first()
-        new_entry = False
+        is_new_entry = False
         if db_entry is None:
             db_entry = Entry(link=link, title=title, content=content)
             db_entry.save()
-            new_entry = True
-        feed.entries.add(db_entry)
-        self.save_words(words, db_entry, feed, new_entry)
+            is_new_entry = True
+        self.save_words(words, db_entry, feed, is_new_entry)
 
     def time_to_datetime(self, time_struct):
         date = datetime(*time_struct[:6])
@@ -245,24 +244,29 @@ class Feeder(object):
         return words
 
     @transaction.atomic
-    def save_words(self, words, entry, feed, new_entry):
+    def save_words(self, words, entry, feed, is_new_entry):
         logger.info('Saving: %s words' % len(words))
+        is_new_feed_entry = False
+        if not Feed.objects.filter(pk=feed.pk, entries__pk=entry.pk).exists():
+            feed.entries.add(entry)
+            is_new_feed_entry = True
         for w in words:
-            if new_entry:
+            # increment words only if it's a new entry
+            if is_new_entry:
                 word, is_created = Word.objects.get_or_create(word=w)
                 word.count += 1
                 word.save()
 
-            feed_word = FeedWord.objects.filter(feed=feed, word=word).first()
-            if feed_word is None:
-                feed_word = FeedWord(feed=feed, word=word)
-            feed_word.count += 1
-            feed_word.save()
+            # increment feed word only if it's a feed's new entry
+            if is_new_feed_entry:
+                feed_word, is_created = FeedWord.objects.get_or_create(
+                    feed=feed, word=word)
+                feed_word.count += 1
+                feed_word.save()
 
-            if new_entry:
-                entry_word = EntryWord.objects.filter(
-                    entry=entry, word=word).first()
-                if entry_word is None:
-                    entry_word = EntryWord(entry=entry, word=word)
+            # increment entry word only when it's a new entry
+            if is_new_entry:
+                entry_word, is_created = EntryWord.objects.get_or_create(
+                    entry=entry, word=word)
                 entry_word.count += 1
                 entry_word.save()
