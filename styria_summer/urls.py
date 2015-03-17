@@ -7,6 +7,6 @@ urlpatterns = patterns(
     # url(r'^$', 'styria_summer.views.home', name='home'),
     # url(r'^blog/', include('blog.urls')),
 
-    url(r'^feeddler/', include('feeddler.urls')),
+    url(r'^', include('feeddler.urls')),
     url(r'^admin/', include(admin.site.urls)),
 )
